@@ -18,7 +18,7 @@ const UploadProgressModal: React.FC<Props> = ({ isOpen, progress, title, filenam
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 animate-fade-in" />
-      <div className="relative w-full max-w-sm bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-6">
+      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-black/20 animate-scale-in p-6">
         <div className="text-center mb-4">
           <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isError ? 'bg-red-100' : status === 'done' ? 'bg-emerald-100' : 'bg-[#0A0A0A]'}`}>
             {isError ? (

@@ -26,7 +26,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onUp
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <div className="absolute inset-0 bg-black/20 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-6 my-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-black/8 animate-scale-in p-6 my-4 max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors"><CloseIcon size={18} /></button>
         
         <div className="flex items-center gap-3 mb-4">

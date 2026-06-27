@@ -26,13 +26,13 @@ export default function BotCheck({ onVerify }: Props) {
     const container = containerRef.current;
     if (!container) return;
     
-    const newPosition = Math.max(0, Math.min(clientX - startXRef.current, container.offsetWidth - 64));
+    const newPosition = Math.max(0, Math.min(clientX - startXRef.current, container.offsetWidth - 48));
     setPosition(newPosition);
 
-    if (newPosition >= container.offsetWidth - 74) {
+    if (newPosition >= container.offsetWidth - 58) {
       setIsVerified(true);
       setIsDragging(false);
-      setPosition(container.offsetWidth - 64);
+      setPosition(container.offsetWidth - 48);
     }
   };
 
@@ -40,7 +40,7 @@ export default function BotCheck({ onVerify }: Props) {
     if (isVerified) return;
     setIsDragging(false);
     const container = containerRef.current;
-    if (container && position < container.offsetWidth - 74) {
+    if (container && position < container.offsetWidth - 58) {
       setPosition(0);
     }
   };
@@ -70,26 +70,26 @@ export default function BotCheck({ onVerify }: Props) {
       <p className="text-[11px] font-semibold text-[#0A0A0A] mb-2">Подтвердите, что вы не бот</p>
       <div 
         ref={containerRef}
-        className={`relative h-16 rounded-xl overflow-hidden select-none transition-colors ${isVerified ? 'bg-emerald-500' : 'bg-[#F0F0F0]'}`}
+        className={`relative h-11 rounded-xl overflow-hidden select-none transition-colors ${isVerified ? 'bg-emerald-500' : 'bg-[#F0F0F0]'}`}
       >
         {/* Progress track */}
         <div 
           className={`absolute left-0 top-0 h-full transition-all ${isVerified ? 'bg-emerald-600' : 'bg-[#E0E0E0]'}`}
-          style={{ width: `${position + 64}px` }}
+          style={{ width: `${position + 48}px` }}
         />
         
         {/* Static text */}
         <div 
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
         >
-          <span className={`text-[13px] font-semibold transition-opacity ${isVerified ? 'text-white opacity-100' : 'text-[#999] opacity-100'}`}>
-            {isVerified ? 'Проверено' : 'Перетащите вправо →'}
+          <span className={`text-[12px] font-semibold transition-opacity ${isVerified ? 'text-white opacity-100' : 'text-[#999] opacity-100'}`}>
+            {isVerified ? 'Проверено ✓' : 'Перетащите вправо →'}
           </span>
         </div>
 
         {/* Slider button */}
         <div
-          className={`absolute top-1 left-0 w-[60px] h-[calc(100%-8px)] rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all ${
+          className={`absolute top-1 left-0 w-[44px] h-[calc(100%-8px)] rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all ${
             isVerified ? 'bg-white' : 'bg-white shadow-md'
           }`}
           style={{ 
@@ -100,11 +100,11 @@ export default function BotCheck({ onVerify }: Props) {
           onTouchStart={(e) => handleStart(e.touches[0].clientX)}
         >
           {isVerified ? (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />
             </svg>
