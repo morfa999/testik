@@ -105,10 +105,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onUp
                 </span>
               </div>
               <div className="flex items-center justify-between px-3 py-2.5 bg-[#F8F8F8] rounded-xl">
-                <span className="text-[12px] text-[#6B6B6B]">Всего скачано</span>
-                <span className="text-[11px] font-medium text-[#999] tabular-nums">{user.totalDownloads || 0}</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2.5 bg-[#F8F8F8] rounded-xl">
                 <span className="text-[12px] text-[#6B6B6B]">Аккаунт создан</span>
                 <span className="text-[11px] font-medium text-[#999]">{new Date(user.createdAt).toLocaleDateString('ru-RU')}</span>
               </div>

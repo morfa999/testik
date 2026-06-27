@@ -106,13 +106,22 @@ const App: React.FC = () => {
     if (!playingId) { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } setPlayProgress(0); setCurrentTime(0); return; }
     const sound = allSounds.find(s => s.id === playingId);
     if (!sound || !sound.fileData) { setPlayingId(null); return; }
-    const audio = new Audio(sound.fileData); audioRef.current = audio;
-    audio.play().catch(() => setPlayingId(null));
+    
+    const audio = new Audio(); 
+    audioRef.current = audio;
     
     let playCountIncremented = false;
     
+    const onLoaded = () => {
+      // Запускаем воспроизведение только после загрузки метаданных
+      audio.play().catch((e) => { 
+        console.warn('Audio play failed:', e);
+        // Не сбрасываем playingId если просто нужно ждать взаимодействия
+      });
+    };
+    
     const up = () => { 
-      if (audio.duration) { 
+      if (audio.duration && isFinite(audio.duration)) { 
         const progress = audio.currentTime / audio.duration;
         setPlayProgress(progress); 
         setCurrentTime(audio.currentTime); 
@@ -120,14 +129,47 @@ const App: React.FC = () => {
         // Инкремент прослушиваний при достижении 100% 
         if (progress >= 0.99 && !playCountIncremented) {
           playCountIncremented = true;
-          // Отправка на сервер
           fetch(`/api/sounds/${playingId}/play`, { method: 'POST' }).catch(() => {});
         }
       } 
     };
     const end = () => { setPlayingId(null); setPlayProgress(0); setCurrentTime(0); };
-    audio.addEventListener('timeupdate', up); audio.addEventListener('ended', end);
-    return () => { audio.removeEventListener('timeupdate', up); audio.removeEventListener('ended', end); audio.pause(); };
+    const onError = (e: any) => {
+      console.error('Audio error:', e);
+      // Только если реальная ошибка, не сбрасываем на паузе
+      if (audio.error && audio.error.code !== 0) {
+        // Попробуем дать пользователю второй шанс
+        setTimeout(() => {
+          if (audioRef.current === audio && playingId) {
+            audio.load();
+            audio.play().catch(() => {});
+          }
+        }, 100);
+      }
+    };
+    
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('canplay', onLoaded);
+    audio.addEventListener('timeupdate', up); 
+    audio.addEventListener('ended', end);
+    audio.addEventListener('error', onError);
+    
+    // Устанавливаем src после подписки на события
+    try {
+      audio.src = sound.fileData;
+      audio.load();
+    } catch (e) {
+      console.error('Audio src error:', e);
+    }
+    
+    return () => { 
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('canplay', onLoaded);
+      audio.removeEventListener('timeupdate', up); 
+      audio.removeEventListener('ended', end);
+      audio.removeEventListener('error', onError);
+      audio.pause();
+    };
   }, [playingId, allSounds]);
 
   const togglePlay = useCallback((id: string) => { setPlayingId(p => p === id ? null : id); if (playingId !== id) { setPlayProgress(0); setCurrentTime(0); } }, [playingId]);

@@ -112,10 +112,8 @@ function fmtPack(p) { return { id:p.id, title:p.title, soundCount:p.sound_count,
 function genWave(seed) { const w=[]; for(let i=0;i<60;i++){const v=Math.abs(Math.sin(i*0.3+seed)*0.4+Math.sin(i*0.7+seed*2)*0.3+Math.sin(i*1.1+seed*0.5)*0.2+Math.sin(i*0.15+seed*3)*0.1);w.push(Math.min(1,Math.max(0.06,v)));} return w; }
 
 function compressAudio(base64Data) {
+  // Просто проверяем что данные валидные, НЕ обрезаем (это ломало файлы > 2 мин)
   if (!base64Data || !base64Data.startsWith('data:audio')) return base64Data;
-  if (base64Data.length > 7 * 1024 * 1024) {
-    return base64Data.substring(0, 7 * 1024 * 1024);
-  }
   return base64Data;
 }
 
