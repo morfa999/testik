@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { CloseIcon, WaveformIcon } from './Icons';
 import { soundCategories } from '../data/sounds';
 import AudioEditor from './AudioEditor';
+import UploadProgressModal from './UploadProgressModal';
 
 interface AddModalProps {
   isOpen: boolean; onClose: () => void;
-  onAddSound: (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string; }) => void | Promise<unknown>;
+  onAddSound: (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string; }) => Promise<{ ok: boolean; pending?: boolean; error?: string }>;
+  onSuccess?: () => void;
 }
 
 const UploadIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
@@ -18,7 +20,7 @@ const TrashIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14,
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
 );
 
-const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, onAddSound }) => {
+const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, onAddSound, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(soundCategories[0]);
   const [tags, setTags] = useState('');
@@ -31,6 +33,12 @@ const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, onAddSound }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Прогресс загрузки
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState<'uploading' | 'saving' | 'done' | 'error'>('uploading');
+  const [progressError, setProgressError] = useState('');
 
   if (!isOpen) return null;
 
@@ -74,12 +82,63 @@ const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, onAddSound }) => {
     audio.onloadedmetadata = () => { const s = Math.floor(audio.duration); setAudioDuration(`${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`); setAudioDurationSecs(s); };
   };
 
-  const handleSubmitSound = () => {
+  const handleSubmitSound = async () => {
     setError('');
     if (!title.trim()) { setError('Введите название'); return; }
     if (!fileData) { setError('Загрузите аудио файл'); return; }
-    onAddSound({ title: title.trim(), category, tags: tags.split(',').map(t => t.trim()).filter(Boolean), isFree, duration: audioDuration, durationSeconds: audioDurationSecs, fileData, fileName });
-    resetForm(); onClose();
+    
+    // Закрываем форму, открываем прогресс
+    const soundData = { 
+      title: title.trim(), 
+      category, 
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean), 
+      isFree, 
+      duration: audioDuration, 
+      durationSeconds: audioDurationSecs, 
+      fileData, 
+      fileName 
+    };
+    
+    resetForm();
+    setProgressOpen(true);
+    setProgress(0);
+    setProgressStatus('uploading');
+    setProgressError('');
+    
+    // Симуляция прогресса - в реальности зависит от скорости
+    const startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 90) return prev;
+        const elapsed = (Date.now() - startTime) / 1000;
+        return Math.min(90, 30 + elapsed * 20); // плавный рост до 90%
+      });
+    }, 200);
+    
+    try {
+      const result = await onAddSound(soundData);
+      clearInterval(progressInterval);
+      setProgress(100);
+      setProgressStatus('saving');
+      
+      setTimeout(() => {
+        setProgressStatus('done');
+        setTimeout(() => {
+          setProgressOpen(false);
+          onClose();
+          onSuccess?.();
+        }, 1200);
+      }, 400);
+      
+      if (!result?.ok && result?.error) {
+        setProgressStatus('error');
+        setProgressError(result.error);
+      }
+    } catch (e: any) {
+      clearInterval(progressInterval);
+      setProgressStatus('error');
+      setProgressError(e?.message || 'Ошибка при сохранении');
+    }
   };
 
   const resetForm = () => { setTitle(''); setCategory(soundCategories[0]); setTags(''); setIsFree(true); setFileName(''); setFileData(undefined); setAudioDuration('0:00'); setAudioDurationSecs(0); setError(''); };
@@ -141,6 +200,15 @@ const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, onAddSound }) => {
         </div>
       </div>
       {showEditor && fileData && <AudioEditor fileData={fileData} fileName={fileName} onSave={handleEditorSave} onClose={() => setShowEditor(false)} />}
+      
+      <UploadProgressModal
+        isOpen={progressOpen}
+        progress={progress}
+        title={progressStatus === 'uploading' ? 'Загружаем файл...' : progressStatus === 'saving' ? 'Сохраняем в базу данных...' : progressStatus === 'done' ? 'Готово!' : 'Ошибка'}
+        filename={fileName || 'audio.wav'}
+        status={progressStatus}
+        errorMessage={progressError}
+      />
     </>
   );
 };

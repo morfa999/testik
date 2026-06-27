@@ -441,11 +441,21 @@ app.post('/api/admin/users/set-admin', async (req, res) => {
   if (!pool) return res.json({ ok: false });
   try {
     const u = await getUser(req);
-    if (!isAdmin(u)) return res.json({ ok: false });
+    if (!isAdmin(u)) return res.json({ ok: false, error: 'Нет прав администратора' });
+    
+    // Защита Директора
+    const target = await pool.query('SELECT email FROM users WHERE id=$1', [req.body.userId]);
+    if (!target.rows.length) return res.json({ ok: false, error: 'Пользователь не найден' });
+    if (target.rows[0].email === ADMIN_EMAIL) return res.json({ ok: false, error: 'Директор всегда остаётся администратором' });
+    
     const { userId, isAdmin: grant } = req.body;
-    await pool.query('UPDATE users SET is_admin=$1 WHERE id=$2', [grant, userId]);
-    res.json({ ok: true });
-  } catch { res.json({ ok: false }); }
+    const result = await pool.query('UPDATE users SET is_admin=$1 WHERE id=$2 RETURNING id, name, email, is_admin', [grant, userId]);
+    
+    if (result.rows.length === 0) return res.json({ ok: false, error: 'Не удалось обновить' });
+    
+    console.log(`Admin set-admin: ${result.rows[0].email} is_admin=${result.rows[0].is_admin}`);
+    res.json({ ok: true, user: { id: result.rows[0].id, isAdmin: result.rows[0].is_admin } });
+  } catch (e) { console.error('set-admin error:', e); res.json({ ok: false, error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/admin/reports/mark-read', async (req, res) => {

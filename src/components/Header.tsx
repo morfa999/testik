@@ -15,7 +15,13 @@ const ShieldIconMobile: React.FC<{ size?: number; className?: string }> = ({ siz
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
 );
 const CrownIconMobile: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 8l10 4 10-4-10-4L2 8z" /><path d="M12 16V8" /><path d="M22 20H2l2-12 8 4 8-4 2 12z" /></svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M3 17l2-9 5 4 2-7 2 7 5-4 2 9z" />
+    <path d="M3 17v3h18v-3" />
+    <circle cx="5" cy="8" r="1.2" fill="currentColor" />
+    <circle cx="12" cy="5" r="1.2" fill="currentColor" />
+    <circle cx="19" cy="8" r="1.2" fill="currentColor" />
+  </svg>
 );
 const SupportIconMobile: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>

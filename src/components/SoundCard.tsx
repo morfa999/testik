@@ -8,6 +8,7 @@ interface SoundCardProps {
   onTogglePlay: () => void; onSeek: (progress: number) => void;
   onDownloadClick: () => void; onPremiumClick?: () => void; animationDelay: number;
   hasPremiumAccess?: boolean;
+  audioElement?: HTMLAudioElement | null;
 }
 
 const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className = '' }) => (
@@ -16,7 +17,7 @@ const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, 
   </svg>
 );
 
-const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false }) => {
+const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false, audioElement }) => {
   const fmtDl = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const isPremium = !sound.isFree;
@@ -62,6 +63,8 @@ const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, c
           progress={isPlaying ? playProgress : 0}
           onSeek={onSeek}
           height={40}
+          isPlaying={isPlaying}
+          audioElement={audioElement}
         />
       </div>
 

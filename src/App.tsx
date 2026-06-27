@@ -179,8 +179,11 @@ const App: React.FC = () => {
 
   const handleAddSound = useCallback(async (data: Parameters<typeof store.addSound>[0]) => {
     const result = await store.addSound(data);
-    if (result.pending) notifyInfo('Звук отправлен на модерацию');
-    else notifySuccess('Звук добавлен');
+    if (result.ok) {
+      if (result.pending) notifyInfo('Звук отправлен на модерацию');
+      else notifySuccess('Звук добавлен');
+    }
+    return result;
   }, [store, notifySuccess, notifyInfo]);
 
   const pluralize = (n: number) => { if (n % 10 === 1 && n % 100 !== 11) return 'звук'; if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'звука'; return 'звуков'; };
@@ -244,7 +247,7 @@ const App: React.FC = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {pagedSounds.map((s, i) => (
-                <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} hasPremiumAccess={hasPremiumAccess} />
+                <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} hasPremiumAccess={hasPremiumAccess} audioElement={playingId === s.id ? audioRef.current : null} />
               ))}
             </div>
             {totalPages > 1 && (
@@ -255,7 +258,7 @@ const App: React.FC = () => {
           <>
             <div className="space-y-1.5">
               {pagedSounds.map((s, i) => (
-                <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} hasPremiumAccess={hasPremiumAccess} />
+                <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} hasPremiumAccess={hasPremiumAccess} audioElement={playingId === s.id ? audioRef.current : null} />
               ))}
             </div>
             {totalPages > 1 && (
@@ -281,6 +284,10 @@ const App: React.FC = () => {
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
         onAddSound={handleAddSound}
+        onSuccess={() => {
+          // После успешной загрузки обновляем данные
+          store.refreshData();
+        }}
       />
 
       {store.currentUser && (

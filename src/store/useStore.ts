@@ -112,11 +112,18 @@ export function useStore() {
     }
   }, [allSounds, canDownload, currentUser, isAdminUser]);
 
-  const addSound = useCallback(async (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string }): Promise<{ pending: boolean }> => {
-    if (!currentUser) return { pending: false };
-    const r = await api('/sounds', data);
-    if (r?.ok) await refreshData();
-    return { pending: r?.pending || false };
+  const addSound = useCallback(async (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string }): Promise<{ ok: boolean; pending?: boolean; error?: string }> => {
+    if (!currentUser) return { ok: false, error: 'Не авторизован' };
+    try {
+      const r = await api('/sounds', data);
+      if (r?.ok) {
+        await refreshData();
+        return { ok: true, pending: r.pending || false };
+      }
+      return { ok: false, error: r?.error || 'Ошибка сохранения' };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || 'Ошибка сети' };
+    }
   }, [currentUser, refreshData]);
 
   const addPack = useCallback(async (data: { title: string; soundCount: number; category: string; isFree: boolean }) => {

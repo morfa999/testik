@@ -8,6 +8,7 @@ interface ListSoundCardProps {
   onTogglePlay: () => void; onSeek: (progress: number) => void;
   onDownloadClick: () => void; onPremiumClick?: () => void; animationDelay: number;
   hasPremiumAccess?: boolean;
+  audioElement?: HTMLAudioElement | null;
 }
 
 const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 11, className = '' }) => (
@@ -16,7 +17,7 @@ const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 11, 
   </svg>
 );
 
-const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false }) => {
+const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false, audioElement }) => {
   const fmtDl = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const isPremium = !sound.isFree;
@@ -37,7 +38,7 @@ const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playPro
         <div className="text-[11px] text-[#6B6B6B] font-medium">{sound.category}</div>
       </div>
       <div className="flex-1 min-w-0 hidden md:block">
-        <WaveformVisualizer waveform={sound.waveform} progress={isPlaying ? playProgress : 0} onSeek={onSeek} height={30} />
+        <WaveformVisualizer waveform={sound.waveform} progress={isPlaying ? playProgress : 0} onSeek={onSeek} height={30} isPlaying={isPlaying} audioElement={audioElement} />
       </div>
       <span className="text-[11px] text-[#B0B0B0] shrink-0 tabular-nums">{isPlaying ? fmtTime(currentTime) : sound.duration}</span>
       {sound.downloads > 0 && <span className="text-[10px] text-[#C0C0C0] tabular-nums shrink-0 hidden sm:block font-medium">{fmtDl(sound.downloads)}</span>}
