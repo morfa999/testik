@@ -6,6 +6,7 @@ interface AudioEditorProps { fileData: string; fileName: string; onSave: (d: str
 const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, onClose }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const originalBufferRef = useRef<AudioBuffer | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const playStartRef = useRef(0);
@@ -37,7 +38,9 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
         const actx = new AudioContext(); audioCtxRef.current = actx;
         const resp = await fetch(fileData); const ab = await resp.arrayBuffer();
         const buf = await actx.decodeAudioData(ab);
-        bufferRef.current = buf; setDuration(buf.duration); recalc(buf);
+        bufferRef.current = buf;
+        originalBufferRef.current = buf; // сохраняем оригинал для отмены
+        setDuration(buf.duration); recalc(buf);
       } catch { /* */ }
       setIsLoading(false);
     })();
@@ -108,6 +111,27 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
 
   const getP = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => { if (!canvasRef.current) return 0; const r = canvasRef.current.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); }, []);
 
+  // ОТМЕНА - возврат к оригиналу
+  const handleUndo = useCallback(() => {
+    if (!originalBufferRef.current) return;
+    stopPreview();
+    // Клонируем оригинальный буфер
+    const orig = originalBufferRef.current;
+    const actx = audioCtxRef.current || new AudioContext();
+    const nb = actx.createBuffer(orig.numberOfChannels, orig.length, orig.sampleRate);
+    for (let c = 0; c < orig.numberOfChannels; c++) {
+      nb.getChannelData(c).set(orig.getChannelData(c));
+    }
+    bufferRef.current = nb;
+    setDuration(nb.duration);
+    setVolume(100);
+    setPitch(0);
+    setIsReversed(false);
+    setSelStart(null);
+    setSelEnd(null);
+    recalc(nb);
+  }, [recalc, stopPreview]);
+
   const delSel = useCallback(() => {
     if (selStart === null || selEnd === null || !bufferRef.current) return;
     stopPreview();
@@ -130,7 +154,9 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
   }, [isReversed, recalc, stopPreview]);
 
   const applyVolume = useCallback(() => {
-    if (!bufferRef.current || volume === 100) return; stopPreview(); const g = volume / 100;
+    if (!bufferRef.current) return; stopPreview();
+    // Работает даже если volume=100 (но тогда ничего не меняется, но всё равно "применимо")
+    const g = volume / 100;
     for (let c = 0; c < bufferRef.current.numberOfChannels; c++) { const d = bufferRef.current.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = Math.max(-1, Math.min(1, d[i] * g)); }
     recalc(bufferRef.current);
   }, [volume, recalc, stopPreview]);
@@ -160,13 +186,21 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
 
   const fmtT = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const hasSel = selStart !== null && selEnd !== null && Math.abs(selEnd - selStart) > 0.005;
+  const hasChanges = volume !== 100 || pitch !== 0 || isReversed || hasSel;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 animate-fade-in" onClick={onClose} />
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl shadow-black/10 animate-scale-in p-6">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors"><CloseIcon size={18} /></button>
-        <h3 className="text-[15px] font-bold text-[#0A0A0A] mb-1">Редактор звука</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-[15px] font-bold text-[#0A0A0A]">Редактор звука</h3>
+          {hasChanges && (
+            <button onClick={handleUndo} className="text-[11px] font-semibold text-red-500 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50 transition-all">
+              Отменить изменения
+            </button>
+          )}
+        </div>
         <p className="text-[11px] text-[#999] mb-4 truncate">{fileName} · {fmtT(duration)}</p>
         {isLoading ? <div className="flex items-center justify-center h-32 text-[13px] text-[#999]">Загрузка аудио...</div> : (
           <>
@@ -192,7 +226,7 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
               <div className="bg-[#F8F8F8] rounded-xl p-3">
                 <label className="text-[10px] font-semibold text-[#999] uppercase tracking-wider mb-2 block">Громкость: {volume}%</label>
                 <input type="range" min="0" max="200" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-full" />
-                <button onClick={applyVolume} disabled={volume === 100} className="mt-2 w-full py-1.5 text-[10px] font-semibold bg-[#0A0A0A] text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1A1A1A] transition-all">Применить</button>
+                <button onClick={applyVolume} className="mt-2 w-full py-1.5 text-[10px] font-semibold bg-[#0A0A0A] text-white rounded-lg hover:bg-[#1A1A1A] transition-all">Применить</button>
               </div>
               <div className="bg-[#F8F8F8] rounded-xl p-3">
                 <label className="text-[10px] font-semibold text-[#999] uppercase tracking-wider mb-2 block">Тональность: {pitch > 0 ? '+' : ''}{pitch}</label>

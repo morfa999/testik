@@ -11,7 +11,7 @@ export interface Pack {
 }
 export interface User {
   id: string; name: string; email: string; avatarColor: string; subscription: 'none' | 'hd' | 'ultra';
-  subscriptionEnd?: string; monthlyDownloads: number; createdAt: string;
+  subscriptionEnd?: string; monthlyDownloads: number; totalDownloads: number; createdAt: string;
 }
 
 const ADMIN_EMAIL = 'energoferon41@gmail.com';
@@ -90,13 +90,26 @@ export function useStore() {
     return { ok: true };
   }, [currentUser, isAdminUser]);
 
-  const downloadSound = useCallback(async (soundId: string) => {
+  const downloadSound = useCallback(async (soundId: string, format: string = 'mp3') => {
     const sound = allSounds.find(s => s.id === soundId); if (!sound) return;
     const check = canDownload(sound); if (!check.ok) return;
-    await api(`/sounds/${soundId}/download`, {});
+    await api(`/sounds/${soundId}/download`, { format });
     setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, downloads: s.downloads + 1 } : s));
-    if (!sound.isFree && currentUser && !isAdminUser) setCurrentUser(u => u ? { ...u, monthlyDownloads: u.monthlyDownloads + 1 } : null);
-    if (sound.fileData && sound.fileName) { const l = document.createElement('a'); l.href = sound.fileData; l.download = sound.fileName; document.body.appendChild(l); l.click(); document.body.removeChild(l); }
+    if (!sound.isFree && currentUser && !isAdminUser) {
+      // Обновляем с сервера для точности monthly/total
+      const me = await api('/me');
+      if (me?.ok && me.user) setCurrentUser(me.user);
+    }
+    if (sound.fileData && sound.fileName) { 
+      const l = document.createElement('a'); 
+      l.href = sound.fileData; 
+      // Меняем расширение в зависимости от формата
+      const baseName = sound.fileName.replace(/\.[^/.]+$/, '');
+      l.download = `${baseName}.${format}`; 
+      document.body.appendChild(l); 
+      l.click(); 
+      document.body.removeChild(l); 
+    }
   }, [allSounds, canDownload, currentUser, isAdminUser]);
 
   const addSound = useCallback(async (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string }): Promise<{ pending: boolean }> => {
@@ -110,8 +123,16 @@ export function useStore() {
     if (!currentUser) return; await api('/packs', data); await refreshData();
   }, [currentUser, refreshData]);
 
-  const deleteSound = useCallback(async () => {}, []);
+  const deleteSound = useCallback(async (soundId: string) => {
+    if (!currentUser) return false;
+    const r = await api(`/sounds/${soundId}/delete`, {});
+    if (r?.ok) {
+      setAllSounds(prev => prev.filter(s => s.id !== soundId));
+      return true;
+    }
+    return false;
+  }, [currentUser]);
   const deletePack = useCallback(async () => {}, []);
 
-  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData };
+  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, isAdminUser };
 }

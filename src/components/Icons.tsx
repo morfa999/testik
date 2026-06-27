@@ -7,13 +7,14 @@ interface IconProps {
 
 export const PlayIcon: React.FC<IconProps> = ({ className = '', size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M8 5.14v14l11-7-11-7z" />
+    <path d="M8 5.14v13.72c0 .79.87 1.27 1.54.86l11.13-6.86c.6-.37.6-1.35 0-1.72L9.54 4.28C8.87 3.87 8 4.35 8 5.14z" />
   </svg>
 );
 
 export const PauseIcon: React.FC<IconProps> = ({ className = '', size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+    <rect x="6" y="4" width="3.6" height="16" rx="1" />
+    <rect x="14.4" y="4" width="3.6" height="16" rx="1" />
   </svg>
 );
 
@@ -212,5 +213,12 @@ export const SkipBackIcon: React.FC<IconProps> = ({ className = '', size = 20 })
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
     <polygon points="19 20 9 12 19 4 19 20" />
     <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
+
+export const TrashIcon: React.FC<IconProps> = ({ className = '', size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
   </svg>
 );

@@ -7,6 +7,7 @@ interface ListSoundCardProps {
   sound: UserSound; isPlaying: boolean; playProgress: number; currentTime: number;
   onTogglePlay: () => void; onSeek: (progress: number) => void;
   onDownloadClick: () => void; onPremiumClick?: () => void; animationDelay: number;
+  hasPremiumAccess?: boolean;
 }
 
 const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 11, className = '' }) => (
@@ -15,7 +16,7 @@ const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 11, 
   </svg>
 );
 
-const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay }) => {
+const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false }) => {
   const fmtDl = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const isPremium = !sound.isFree;
@@ -41,7 +42,7 @@ const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playPro
       <span className="text-[11px] text-[#B0B0B0] shrink-0 tabular-nums">{isPlaying ? fmtTime(currentTime) : sound.duration}</span>
       {sound.downloads > 0 && <span className="text-[10px] text-[#C0C0C0] tabular-nums shrink-0 hidden sm:block font-medium">{fmtDl(sound.downloads)}</span>}
       <span className="text-[10px] text-[#999] shrink-0 hidden md:block font-medium truncate max-w-[80px]">{sound.authorName}</span>
-      {isPremium ? (
+      {isPremium && !hasPremiumAccess ? (
         <button onClick={onPremiumClick} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all bg-[#E5E5E5] text-[#999] hover:bg-[#D4D4D4]"><LockIcon size={11} />Premium</button>
       ) : (
         <button onClick={onDownloadClick} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all bg-[#0A0A0A] text-white hover:bg-[#1A1A1A]"><DownloadIcon size={11} />Скачать</button>

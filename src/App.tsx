@@ -64,6 +64,7 @@ const App: React.FC = () => {
   }, []);
 
   const isAdmin = store.currentUser?.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const hasPremiumAccess = isAdmin || (store.currentUser?.subscription === 'hd') || (store.currentUser?.subscription === 'ultra');
   const allSounds = store.allSounds;
 
   const soundsWithNewFlag = useMemo(() => {
@@ -84,7 +85,7 @@ const App: React.FC = () => {
     if (searchQuery.trim()) { const q = searchQuery.toLowerCase().trim(); r = r.filter(s => s.title.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || s.tags.some(t => t.toLowerCase().includes(q)) || s.authorName.toLowerCase().includes(q)); }
     switch (sortBy) {
       case 'newest': r.sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()); break;
-      case 'downloads': r.sort((a, b) => b.downloads - a.downloads); break;
+      case 'downloads': r.sort((a, b) => ((b.plays || 0) + b.downloads) - ((a.plays || 0) + a.downloads)); break;
       case 'name': r.sort((a, b) => a.title.localeCompare(b.title)); break;
     }
     return r;
@@ -132,7 +133,7 @@ const App: React.FC = () => {
   const togglePlay = useCallback((id: string) => { setPlayingId(p => p === id ? null : id); if (playingId !== id) { setPlayProgress(0); setCurrentTime(0); } }, [playingId]);
   const handleSeek = useCallback((p: number) => { if (audioRef.current?.duration) { audioRef.current.currentTime = p * audioRef.current.duration; setPlayProgress(p); setCurrentTime(audioRef.current.currentTime); } }, []);
   const handleDownloadClick = useCallback((s: UserSound) => { setDownloadSound(s); setDownloadOpen(true); }, []);
-  const handleDownload = useCallback((id: string, _f: string) => { store.downloadSound(id); notifySuccess('Скачивание началось'); }, [store, notifySuccess]);
+  const handleDownload = useCallback((id: string, format: string) => { store.downloadSound(id, format); notifySuccess(`Скачивание в ${format.toUpperCase()}`); }, [store, notifySuccess]);
 
   const handleAddSound = useCallback(async (data: Parameters<typeof store.addSound>[0]) => {
     const result = await store.addSound(data);
@@ -201,7 +202,7 @@ const App: React.FC = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {pagedSounds.map((s, i) => (
-                <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} />
+                <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} hasPremiumAccess={hasPremiumAccess} />
               ))}
             </div>
             {totalPages > 1 && (
@@ -212,7 +213,7 @@ const App: React.FC = () => {
           <>
             <div className="space-y-1.5">
               {pagedSounds.map((s, i) => (
-                <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} />
+                <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} hasPremiumAccess={hasPremiumAccess} />
               ))}
             </div>
             {totalPages > 1 && (
@@ -238,7 +239,6 @@ const App: React.FC = () => {
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
         onAddSound={handleAddSound}
-        onAddPack={store.addPack}
       />
 
       {store.currentUser && (
@@ -249,6 +249,11 @@ const App: React.FC = () => {
           onUpdateName={store.updateName}
           onLogout={store.logout}
           userSounds={allSounds.filter(s => s.authorId === store.currentUser?.id)}
+          onDeleteSound={async (id) => {
+            const ok = await store.deleteSound(id);
+            if (ok) store.refreshData();
+            return ok;
+          }}
         />
       )}
 

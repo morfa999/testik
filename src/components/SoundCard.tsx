@@ -7,6 +7,7 @@ interface SoundCardProps {
   sound: UserSound; isPlaying: boolean; playProgress: number; currentTime: number;
   onTogglePlay: () => void; onSeek: (progress: number) => void;
   onDownloadClick: () => void; onPremiumClick?: () => void; animationDelay: number;
+  hasPremiumAccess?: boolean;
 }
 
 const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, className = '' }) => (
@@ -15,7 +16,7 @@ const LockIcon: React.FC<{ size?: number; className?: string }> = ({ size = 12, 
   </svg>
 );
 
-const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay }) => {
+const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, currentTime, onTogglePlay, onSeek, onDownloadClick, onPremiumClick, animationDelay, hasPremiumAccess = false }) => {
   const fmtDl = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const isPremium = !sound.isFree;
@@ -82,7 +83,7 @@ const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, c
           <span className="text-[#C0C0C0]">·</span>
           <span className="text-[#999] font-medium truncate max-w-[100px]">{sound.authorName}</span>
         </div>
-        {isPremium ? (
+        {isPremium && !hasPremiumAccess ? (
           <button
             onClick={onPremiumClick}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all bg-[#E5E5E5] text-[#999] hover:bg-[#D4D4D4]"

@@ -14,32 +14,28 @@ const TelegramIcon: React.FC<{ size?: number; className?: string }> = ({ size = 
 
 const Footer: React.FC<FooterProps> = ({ onOpenPage }) => (
   <footer className="border-t border-[#EBEBEB] bg-white mt-8">
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-5">
-        <div>
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#BABABA] mb-3">Ресурсы</h4>
-          <ul className="space-y-1.5">
-            <li><button onClick={() => onOpenPage('license')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Лицензия</button></li>
-            <li><button onClick={() => onOpenPage('faq')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">FAQ</button></li>
-          </ul>
+    <div className="max-w-7xl mx-auto px-6 py-5">
+      <div className="flex flex-wrap items-center justify-between gap-y-3 text-[12px]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#BABABA]">Ресурсы</span>
+          <button onClick={() => onOpenPage('license')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Лицензия</button>
+          <button onClick={() => onOpenPage('faq')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">FAQ</button>
         </div>
-        <div>
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#BABABA] mb-3">Компания</h4>
-          <ul className="space-y-1.5">
-            <li><button onClick={() => onOpenPage('about')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">О нас</button></li>
-            <li><button onClick={() => onOpenPage('privacy')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Конфиденциальность</button></li>
-            <li><button onClick={() => onOpenPage('terms')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Условия</button></li>
-          </ul>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#BABABA]">Компания</span>
+          <button onClick={() => onOpenPage('about')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">О нас</button>
+          <button onClick={() => onOpenPage('privacy')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Конфиденциальность</button>
+          <button onClick={() => onOpenPage('terms')} className="text-[12px] text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Условия</button>
         </div>
       </div>
-      <div className="pt-4 border-t border-[#F0F0F0] flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="mt-4 pt-4 border-t border-[#F0F0F0] flex flex-wrap items-center justify-between gap-y-2 text-[10px]">
         <span className="text-[10px] text-[#C0C0C0] font-medium">&copy; 2026 KITSTUDIO. Все права защищены.</span>
         <div className="flex items-center gap-3">
           <a href="https://discord.gg/example" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-[#B0B0B0] hover:text-[#5865F2] transition-colors">
-            <DiscordIcon size={12} className="text-[#C0C0C0] group-hover:text-[#5865F2]" />Discord
+            <DiscordIcon size={12} className="text-[#C0C0C0]" />Discord
           </a>
           <a href="https://t.me/example" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-[#B0B0B0] hover:text-[#27A7E7] transition-colors">
-            <TelegramIcon size={12} className="text-[#C0C0C0] group-hover:text-[#27A7E7]" />Telegram
+            <TelegramIcon size={12} className="text-[#C0C0C0]" />Telegram
           </a>
         </div>
       </div>

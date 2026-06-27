@@ -45,7 +45,7 @@ async function initDB() {
   try {
     console.log('Initializing database tables...');
     
-    await c.query(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, avatar_color TEXT NOT NULL DEFAULT '#3B82F6', subscription TEXT NOT NULL DEFAULT 'none', subscription_end TIMESTAMPTZ, monthly_downloads INT NOT NULL DEFAULT 0, is_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+    await c.query(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, avatar_color TEXT NOT NULL DEFAULT '#3B82F6', subscription TEXT NOT NULL DEFAULT 'none', subscription_end TIMESTAMPTZ, monthly_downloads INT NOT NULL DEFAULT 0, total_downloads INT NOT NULL DEFAULT 0, monthly_reset_at TIMESTAMPTZ, is_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     
     await c.query(`CREATE TABLE IF NOT EXISTS sounds (id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'Drums', tags TEXT[] NOT NULL DEFAULT '{}', downloads INT NOT NULL DEFAULT 0, plays INT NOT NULL DEFAULT 0, is_free BOOLEAN NOT NULL DEFAULT true, duration TEXT NOT NULL DEFAULT '0:00', duration_seconds INT NOT NULL DEFAULT 0, waveform REAL[] NOT NULL DEFAULT '{}', date_added TIMESTAMPTZ NOT NULL DEFAULT NOW(), author_id TEXT NOT NULL, author_name TEXT NOT NULL, file_data TEXT, file_name TEXT)`);
     
@@ -57,12 +57,15 @@ async function initDB() {
     
     await c.query(`CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, user_name TEXT NOT NULL, user_email TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     
-    await c.query(`CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-    
+    await c.query(`CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, target_user_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+
     await c.query(`CREATE TABLE IF NOT EXISTS user_broadcasts (user_id TEXT NOT NULL, broadcast_id TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT false, PRIMARY KEY (user_id, broadcast_id))`);
-    
+
     // Add plays column if missing
     try { await c.query(`ALTER TABLE sounds ADD COLUMN IF NOT EXISTS plays INT NOT NULL DEFAULT 0`); } catch (e) { /* ignore */ }
+    try { await c.query(`ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS target_user_id TEXT`); } catch (e) { /* ignore */ }
+    try { await c.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS total_downloads INT NOT NULL DEFAULT 0`); } catch (e) { /* ignore */ }
+    try { await c.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_reset_at TIMESTAMPTZ`); } catch (e) { /* ignore */ }
     
     // Set main admin
     await c.query(`UPDATE users SET is_admin=true WHERE LOWER(email)=LOWER($1)`, [ADMIN_EMAIL]);
@@ -103,7 +106,7 @@ async function getUser(req) {
 
 function isAdmin(u) { return u && (u.email === ADMIN_EMAIL || u.is_admin); }
 const COLORS = ['#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#6366F1','#8B5CF6','#EC4899','#F43F5E'];
-function fmtUser(u) { return { id:u.id, name:u.name, email:u.email, avatarColor:u.avatar_color, subscription:u.subscription, subscriptionEnd:u.subscription_end, monthlyDownloads:u.monthly_downloads, createdAt:u.created_at }; }
+function fmtUser(u) { return { id:u.id, name:u.name, email:u.email, avatarColor:u.avatar_color, subscription:u.subscription, subscriptionEnd:u.subscription_end, monthlyDownloads:u.monthly_downloads, totalDownloads:u.total_downloads||0, createdAt:u.created_at }; }
 function fmtSound(s) { return { id:s.id, title:s.title, category:s.category, bpm:0, key:'-', tags:s.tags||[], downloads:s.downloads, plays:s.plays||0, isFree:s.is_free, isNew:true, waveform:s.waveform||[], duration:s.duration, durationSeconds:s.duration_seconds, dateAdded:s.date_added, authorId:s.author_id, authorName:s.author_name, fileData:s.file_data, fileName:s.file_name }; }
 function fmtPack(p) { return { id:p.id, title:p.title, soundCount:p.sound_count, category:p.category, isFree:p.is_free, downloads:p.downloads, authorId:p.author_id, authorName:p.author_name, dateAdded:p.date_added }; }
 function genWave(seed) { const w=[]; for(let i=0;i<60;i++){const v=Math.abs(Math.sin(i*0.3+seed)*0.4+Math.sin(i*0.7+seed*2)*0.3+Math.sin(i*1.1+seed*0.5)*0.2+Math.sin(i*0.15+seed*3)*0.1);w.push(Math.min(1,Math.max(0.06,v)));} return w; }
@@ -232,7 +235,34 @@ app.post('/api/sounds/:id/download', async (req, res) => {
   try {
     await pool.query('UPDATE sounds SET downloads=downloads+1 WHERE id=$1', [req.params.id]);
     const u = await getUser(req);
-    if (u && !isAdmin(u)) await pool.query('UPDATE users SET monthly_downloads=monthly_downloads+1 WHERE id=$1', [u.id]);
+    if (u && !isAdmin(u)) {
+      // Проверка сброса месячного счетчика (каждый месяц 1-го числа)
+      const now = new Date();
+      const resetAt = u.monthly_reset_at ? new Date(u.monthly_reset_at) : null;
+      const shouldReset = !resetAt || (now.getMonth() !== resetAt.getMonth() || now.getFullYear() !== resetAt.getFullYear());
+      
+      if (shouldReset) {
+        // Первый день следующего месяца
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        await pool.query('UPDATE users SET monthly_downloads=1, total_downloads=total_downloads+1, monthly_reset_at=$1 WHERE id=$2', [nextMonth.toISOString(), u.id]);
+      } else {
+        await pool.query('UPDATE users SET monthly_downloads=monthly_downloads+1, total_downloads=total_downloads+1 WHERE id=$1', [u.id]);
+      }
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.json({ ok: false }); }
+});
+
+app.post('/api/sounds/:id/delete', async (req, res) => {
+  if (!pool) return res.json({ ok: false });
+  try {
+    const u = await getUser(req);
+    if (!u) return res.json({ ok: false, error: 'Не авторизован' });
+    // Проверка: можно удалять только свои звуки
+    const r = await pool.query('SELECT author_id FROM sounds WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.json({ ok: false, error: 'Звук не найден' });
+    if (r.rows[0].author_id !== u.id && !isAdmin(u)) return res.json({ ok: false, error: 'Нет прав' });
+    await pool.query('DELETE FROM sounds WHERE id=$1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { console.error(e); res.json({ ok: false }); }
 });
@@ -297,7 +327,7 @@ app.get('/api/broadcasts', async (req, res) => {
   try {
     const u = await getUser(req);
     if (!u) return res.json({ broadcasts: [], unread: 0 });
-    const r = await pool.query(`SELECT b.*, COALESCE(ub.read, false) as read FROM broadcasts b LEFT JOIN user_broadcasts ub ON b.id=ub.broadcast_id AND ub.user_id=$1 ORDER BY b.created_at DESC LIMIT 50`, [u.id]);
+    const r = await pool.query(`SELECT b.*, COALESCE(ub.read, false) as read FROM broadcasts b LEFT JOIN user_broadcasts ub ON b.id=ub.broadcast_id AND ub.user_id=$1 WHERE b.target_user_id IS NULL OR b.target_user_id=$1 ORDER BY b.created_at DESC LIMIT 50`, [u.id]);
     const broadcasts = r.rows.map(b => ({ id: b.id, title: b.title, body: b.body, createdAt: b.created_at, read: b.read }));
     const unread = broadcasts.filter(b => !b.read).length;
     res.json({ broadcasts, unread });
@@ -441,6 +471,21 @@ app.post('/api/admin/broadcasts', async (req, res) => {
     await pool.query('INSERT INTO broadcasts (id, title, body) VALUES ($1, $2, $3)', [id, title.trim(), body.trim()]);
     res.json({ ok: true });
   } catch { res.json({ ok: false }); }
+});
+
+// Системное сообщение конкретному пользователю - помечается user_id
+app.post('/api/admin/send-system-message', async (req, res) => {
+  if (!pool) return res.json({ ok: false });
+  try {
+    const u = await getUser(req);
+    if (!isAdmin(u)) return res.json({ ok: false, error: 'Нет прав' });
+    const { userId, title, body } = req.body;
+    if (!userId || !title?.trim() || !body?.trim()) return res.json({ ok: false, error: 'Не указаны параметры' });
+    const id = genId();
+    // Сохраняем в broadcasts с user_id для фильтрации
+    await pool.query('INSERT INTO broadcasts (id, title, body, target_user_id) VALUES ($1, $2, $3, $4)', [id, title.trim(), body.trim(), userId]);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.json({ ok: false }); }
 });
 
 // SPA fallback - serves index.html for all non-API routes
