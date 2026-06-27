@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth, user, onOpenProfile, onOpen
     <header className="sticky top-0 z-50 bg-[#FAFAFA] border-b border-[#EBEBEB]">
       <div className="max-w-7xl mx-auto px-6 h-[56px] flex items-center justify-between">
         <button onClick={onGoHome} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <span className="text-2xl">🎵</span>
+          <img src="/images/logov.png" alt="KITSTUDIO" className="h-7 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           <span className="text-[16px] font-extrabold tracking-[-0.02em] text-[#0A0A0A]">KITSTUDIO</span>
         </button>
         

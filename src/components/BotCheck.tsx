@@ -26,23 +26,21 @@ export default function BotCheck({ onVerify }: Props) {
     const container = containerRef.current;
     if (!container) return;
     
-    const newPosition = Math.max(0, Math.min(clientX - startXRef.current, container.offsetWidth - 50));
+    const newPosition = Math.max(0, Math.min(clientX - startXRef.current, container.offsetWidth - 64));
     setPosition(newPosition);
 
-    // Проверка достижения конца
-    if (newPosition >= container.offsetWidth - 60) {
+    if (newPosition >= container.offsetWidth - 74) {
       setIsVerified(true);
       setIsDragging(false);
-      setPosition(container.offsetWidth - 50);
+      setPosition(container.offsetWidth - 64);
     }
   };
 
   const handleEnd = () => {
     if (isVerified) return;
     setIsDragging(false);
-    // Если не дотянули до конца - возврат
     const container = containerRef.current;
-    if (container && position < container.offsetWidth - 60) {
+    if (container && position < container.offsetWidth - 74) {
       setPosition(0);
     }
   };
@@ -67,57 +65,31 @@ export default function BotCheck({ onVerify }: Props) {
     };
   }, [isDragging, position]);
 
-  const progress = containerRef.current ? (position / (containerRef.current.offsetWidth - 50)) * 100 : 0;
-
   return (
     <div className="mt-3">
       <p className="text-[11px] font-semibold text-[#0A0A0A] mb-2">Подтвердите, что вы не бот</p>
       <div 
         ref={containerRef}
-        className={`relative h-12 rounded-xl overflow-hidden ${isVerified ? 'bg-emerald-500' : 'bg-[#F0F0F0]'} select-none transition-colors`}
+        className={`relative h-16 rounded-xl overflow-hidden select-none transition-colors ${isVerified ? 'bg-emerald-500' : 'bg-[#F0F0F0]'}`}
       >
         {/* Progress track */}
         <div 
           className={`absolute left-0 top-0 h-full transition-all ${isVerified ? 'bg-emerald-600' : 'bg-[#E0E0E0]'}`}
-          style={{ width: `${position + 50}px` }}
+          style={{ width: `${position + 64}px` }}
         />
         
-        {/* Text */}
+        {/* Static text */}
         <div 
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ 
-            opacity: isVerified ? 0 : Math.max(0.3, 1 - progress / 100),
-            transition: 'opacity 0.2s'
-          }}
         >
-          <span className="text-[12px] font-medium text-[#999]">
-            {isVerified ? '' : 'Перетащите вправо'}
+          <span className={`text-[13px] font-semibold transition-opacity ${isVerified ? 'text-white opacity-100' : 'text-[#999] opacity-100'}`}>
+            {isVerified ? 'Проверено' : 'Перетащите вправо →'}
           </span>
         </div>
 
-        {/* Success text */}
-        {isVerified && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[12px] font-bold text-white">Почти получилось!</span>
-          </div>
-        )}
-
-        {/* Dragging text - follows slider */}
-        {!isVerified && position > 10 && (
-          <div 
-            className="absolute top-1/2 -translate-y-1/2 pointer-events-none whitespace-nowrap"
-            style={{ 
-              left: `${Math.max(8, position - 90)}px`,
-              opacity: Math.min(1, position / 50)
-            }}
-          >
-            <span className="text-[11px] font-semibold text-[#6B6B6B]">Почти получилось!</span>
-          </div>
-        )}
-
         {/* Slider button */}
         <div
-          className={`absolute top-1 left-0 w-[50px] h-[calc(100%-8px)] rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all ${
+          className={`absolute top-1 left-0 w-[60px] h-[calc(100%-8px)] rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all ${
             isVerified ? 'bg-white' : 'bg-white shadow-md'
           }`}
           style={{ 
@@ -128,12 +100,13 @@ export default function BotCheck({ onVerify }: Props) {
           onTouchStart={(e) => handleStart(e.touches[0].clientX)}
         >
           {isVerified ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
             </svg>
           )}
         </div>

@@ -38,10 +38,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode, onClose, onSwitchMo
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-black/8 animate-scale-in p-7" onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()}>
+      <div className="relative w-full max-w-sm bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-7" onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()}>
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors"><CloseIcon size={18} /></button>
         <div className="flex items-center gap-2 mb-6">
-          <span className="text-[22px]">🎵</span>
+          <img src="/images/logov.png" alt="KITSTUDIO" className="h-5 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           <span className="text-[15px] font-bold tracking-tight text-[#0A0A0A]">KITSTUDIO</span>
         </div>
         <h2 className="text-xl font-bold text-[#0A0A0A] mb-1">{isLogin ? 'С возвращением' : 'Создать аккаунт'}</h2>

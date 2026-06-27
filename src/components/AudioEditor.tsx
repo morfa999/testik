@@ -164,7 +164,7 @@ const AudioEditor: React.FC<AudioEditorProps> = ({ fileData, fileName, onSave, o
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl shadow-black/10 animate-scale-in p-6">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-6">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors"><CloseIcon size={18} /></button>
         <h3 className="text-[15px] font-bold text-[#0A0A0A] mb-1">Редактор звука</h3>
         <p className="text-[11px] text-[#999] mb-4 truncate">{fileName} · {fmtT(duration)}</p>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { CloseIcon } from './Icons';
 
+import { PageKey } from '../data/content';
+
 interface PremiumModalProps { 
   isOpen: boolean; 
   onClose: () => void; 
@@ -8,6 +10,7 @@ interface PremiumModalProps {
   onSubscribe: (plan: 'hd' | 'ultra') => void; 
   isLoggedIn: boolean; 
   onOpenAuth: () => void; 
+  onOpenPage: (page: PageKey) => void;
 }
 
 const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -16,13 +19,13 @@ const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, currentSub, onSubscribe, isLoggedIn, onOpenAuth }) => {
+const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, currentSub, onSubscribe, isLoggedIn, onOpenAuth, onOpenPage }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <div className="absolute inset-0 bg-black/20 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl shadow-black/8 animate-scale-in p-7 my-4">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-7 my-4">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors">
           <CloseIcon size={18} />
         </button>
@@ -144,14 +147,12 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, currentSub
         </div>
 
         <div className="mt-5 text-center">
-          <a 
-            href="https://example.com/subscription-policy" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <button 
+            onClick={() => { onClose(); onOpenPage('subscriptionPolicy'); }} 
             className="text-[11px] text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors underline"
           >
             Правила политики подписки
-          </a>
+          </button>
         </div>
       </div>
     </div>

@@ -21,7 +21,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, sound, u
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-black/8 animate-scale-in p-6">
+      <div className="relative w-full max-w-sm bg-white rounded-2xl border border-[#E5E5E5] shadow-lg animate-scale-in p-6">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 text-[#B0B0B0] hover:text-[#0A0A0A] transition-colors"><CloseIcon size={18} /></button>
         <h2 className="text-lg font-bold text-[#0A0A0A] mb-1">Скачать звук</h2>
         <p className="text-[12px] text-[#999] mb-5 truncate">{sound.title}</p>

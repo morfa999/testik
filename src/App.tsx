@@ -20,10 +20,14 @@ import { FilterIcon, GridIcon, ListIcon, WaveformIcon } from './components/Icons
 import { categories, sortOptions, SoundCategory } from './data/sounds';
 import { useStore, UserSound } from './store/useStore';
 import { useNotify } from './notify';
+import { PageKey } from './data/content';
+import ContentPage from './components/ContentPage';
+import Pagination from './components/Pagination';
 
 type ViewMode = 'grid' | 'list';
 const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 const ADMIN_EMAIL = 'energoferon41@gmail.com';
+const ITEMS_PER_PAGE = 9;
 
 const App: React.FC = () => {
   const store = useStore();
@@ -50,6 +54,8 @@ const App: React.FC = () => {
   const [supportOpen, setSupportOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [contentPage, setContentPage] = useState<PageKey | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const openAuth = useCallback((mode: 'login' | 'register') => { setAuthMode(mode); setAuthOpen(true); }, []);
   const handleGoHome = useCallback(() => {
@@ -83,6 +89,17 @@ const App: React.FC = () => {
     }
     return r;
   }, [soundsWithNewFlag, selectedCategory, searchQuery, sortBy, showOnlyFree]);
+
+  // Сброс страницы при смене фильтров
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, sortBy, showOnlyFree]);
+
+  const totalPages = Math.ceil(filteredSounds.length / ITEMS_PER_PAGE);
+  const pagedSounds = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSounds.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredSounds, currentPage]);
 
   useEffect(() => {
     if (!playingId) { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } setPlayProgress(0); setCurrentTime(0); return; }
@@ -181,21 +198,31 @@ const App: React.FC = () => {
             <p className="text-[13px] text-[#B0B0B0]">{allSounds.length === 0 ? 'Добавьте первый звук' : 'Попробуйте изменить параметры поиска'}</p>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {filteredSounds.map((s, i) => (
-              <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {pagedSounds.map((s, i) => (
+                <SoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 40} />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            )}
+          </>
         ) : (
-          <div className="space-y-1.5">
-            {filteredSounds.map((s, i) => (
-              <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-1.5">
+              {pagedSounds.map((s, i) => (
+                <ListSoundCard key={s.id} sound={s} isPlaying={playingId === s.id} playProgress={playingId === s.id ? playProgress : 0} currentTime={playingId === s.id ? currentTime : 0} onTogglePlay={() => togglePlay(s.id)} onSeek={handleSeek} onDownloadClick={() => handleDownloadClick(s)} onPremiumClick={() => setPremiumOpen(true)} animationDelay={i * 25} />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            )}
+          </>
         )}
       </main>
 
-      <Footer />
+      <Footer onOpenPage={setContentPage} />
       <CookieBanner />
 
       <AuthModal
@@ -232,6 +259,7 @@ const App: React.FC = () => {
         onSubscribe={plan => store.setSubscription(plan)}
         isLoggedIn={!!store.currentUser}
         onOpenAuth={() => { setPremiumOpen(false); openAuth('register'); }}
+        onOpenPage={setContentPage}
       />
 
       <DownloadModal
@@ -258,6 +286,12 @@ const App: React.FC = () => {
           onRefresh={store.refreshData}
         />
       )}
+
+      <ContentPage 
+        isOpen={contentPage !== null} 
+        onClose={() => setContentPage(null)} 
+        page={contentPage || 'faq'} 
+      />
     </div>
   );
 };
