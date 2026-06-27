@@ -77,7 +77,15 @@ const AdminPanel: React.FC<Props> = ({ isOpen, onClose, onRefresh }) => {
     const action = u.isAdmin ? 'забрать' : 'выдать';
     if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} права администратора у "${u.name}"?`)) return;
     const r = await aApi('/admin/users/set-admin', { userId: u.id, isAdmin: !u.isAdmin });
-    if (r?.ok) await load();
+    if (r?.ok) {
+      await load();
+      // Если меняли права самого себя - обновить currentUser
+      const me = await aApi('/me');
+      if (me?.ok && me.user) {
+        // Сохраняем обновленного пользователя в localStorage чтобы страница подхватила
+        localStorage.setItem('ks_user_update', JSON.stringify({ ...me.user, _ts: Date.now() }));
+      }
+    }
   };
 
   const markReport = async (r: AdminReport) => {

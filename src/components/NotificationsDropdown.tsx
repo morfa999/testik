@@ -47,7 +47,7 @@ const NotificationsDropdown: React.FC<Props> = ({ isOpen, onClose, onCountChange
   if (!isOpen) return null;
 
   return (
-    <div ref={ref} className="absolute right-0 top-full mt-2 w-80 bg-white border border-[#E5E5E5] rounded-xl shadow-xl shadow-black/8 z-50 animate-scale-in origin-top-right max-h-[420px] overflow-y-auto">
+    <div ref={ref} className="absolute right-4 top-full mt-2 w-80 bg-white border border-[#E5E5E5] rounded-xl shadow-xl shadow-black/8 z-50 animate-scale-in origin-top-right max-h-[420px] overflow-y-auto">
       <div className="sticky top-0 bg-white border-b border-[#F0F0F0] px-4 py-3 flex items-center justify-between">
         <h3 className="text-[13px] font-bold text-[#0A0A0A]">Уведомления</h3>
         <button onClick={onClose} className="p-1 text-[#B0B0B0] hover:text-[#0A0A0A]"><CloseIcon size={14} /></button>

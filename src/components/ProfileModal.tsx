@@ -38,6 +38,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onUp
   const subColor = user.subscription === 'none' ? 'bg-[#F3F3F3] text-[#999]' : user.subscription === 'hd' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
 
   const isDirector = user.email === 'energoferon41@gmail.com';
+  const isAdmin = (user as any).isAdmin === true;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
@@ -70,9 +71,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onUp
                   {user.name}
                 </span>
               )}
-              {isDirector && (
+              {isDirector ? (
                 <span className="text-[9px] font-bold uppercase tracking-wider bg-[#0A0A0A] text-white px-2 py-0.5 rounded">Директор</span>
-              )}
+              ) : isAdmin ? (
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500 text-white px-2 py-0.5 rounded">Администратор</span>
+              ) : null}
             </div>
             <div className="text-[11px] text-[#999] truncate mt-0.5">{user.email}</div>
           </div>

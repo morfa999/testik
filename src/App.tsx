@@ -34,6 +34,15 @@ const App: React.FC = () => {
   const { success: notifySuccess, info: notifyInfo } = useNotify();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Периодически проверяем обновления currentUser (для отображения новых прав админа)
+  useEffect(() => {
+    if (!store.currentUser) return;
+    const interval = setInterval(() => {
+      store.refreshCurrentUser();
+    }, 30000); // каждые 30 секунд
+    return () => clearInterval(interval);
+  }, [store.currentUser?.id]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SoundCategory>('All');
   const [sortBy, setSortBy] = useState('newest');
