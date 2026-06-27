@@ -6,8 +6,6 @@ interface WaveformVisualizerProps {
   isPlaying?: boolean;
   onSeek: (progress: number) => void;
   height?: number;
-  barWidth?: number;
-  barGap?: number;
   audioElement?: HTMLAudioElement | null;
 }
 
@@ -22,7 +20,8 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const [liveData, setLiveData] = useState<number[] | null>(null);
 
-  const totalBars = waveform.length;
+  // Меньше баров чтобы не выходили за рамки
+  const totalBars = 48;
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -53,7 +52,7 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
       
       if (!analyserRef.current) {
         analyserRef.current = ctx.createAnalyser();
-        analyserRef.current.fftSize = 128;
+        analyserRef.current.fftSize = 64;
       }
       sourceRef.current.connect(analyserRef.current);
     } catch (e) {
@@ -78,15 +77,14 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
       if (!analyserRef.current) return;
       analyserRef.current.getByteFrequencyData(dataArray);
       
-      // Преобразуем частотные данные в бары (60 баров)
       const bars: number[] = [];
-      const step = Math.floor(bufferLength / totalBars) || 1;
+      const step = Math.max(1, Math.floor(bufferLength / totalBars));
       for (let i = 0; i < totalBars; i++) {
         let sum = 0;
         for (let j = 0; j < step; j++) {
           sum += dataArray[i * step + j] || 0;
         }
-        bars.push(sum / step / 255); // нормализуем 0-1
+        bars.push(Math.min(1, sum / step / 255));
       }
       setLiveData(bars);
       animationRef.current = requestAnimationFrame(tick);
@@ -97,9 +95,9 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
     return () => {
       cancelAnimationFrame(animationRef.current);
     };
-  }, [isPlaying, totalBars]);
+  }, [isPlaying]);
 
-  // Рисуем на canvas для плавности
+  // Рисуем на canvas - БЕЗ анимации при паузе, с реальными данными при игре
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
     const canvas = canvasRef.current;
@@ -115,29 +113,46 @@ const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
     const w = rect.width;
     const h = rect.height;
     const barW = w / totalBars;
+    const gap = Math.max(0.5, barW * 0.15);
+    const actualBarW = barW - gap;
     
     ctx.clearRect(0, 0, w, h);
     
+    // Привязываем массив waveform к 48 барам (downsampling)
+    const sourceData = isPlaying && liveData ? liveData : null;
+    
     for (let i = 0; i < totalBars; i++) {
-      // Используем liveData если играет, иначе waveform (статический)
-      const value = isPlaying && liveData ? liveData[i] : waveform[i];
-      const barHeight = Math.max(2, value * h * 0.88);
-      const x = i * barW;
+      let value: number;
+      if (sourceData) {
+        // Реальные данные из анализатора
+        value = sourceData[i] || 0;
+      } else {
+        // Статичные данные из базы - усредняем
+        const startIdx = Math.floor(i * waveform.length / totalBars);
+        const endIdx = Math.floor((i + 1) * waveform.length / totalBars);
+        let sum = 0;
+        for (let j = startIdx; j < endIdx; j++) sum += waveform[j] || 0;
+        value = sum / Math.max(1, endIdx - startIdx);
+      }
+      
+      // Ограничиваем высоту чтобы не выходило за границы
+      const barHeight = Math.max(2, Math.min(h * 0.92, value * h * 0.85));
+      const x = i * barW + gap / 2;
       const y = (h - barHeight) / 2;
       const isPast = (i / totalBars) <= progress;
       
       ctx.fillStyle = isPast ? '#0A0A0A' : '#DCDCDC';
       ctx.globalAlpha = isPast ? 0.9 : 0.5;
       ctx.beginPath();
-      ctx.roundRect(x, y, Math.max(1, barW - 0.5), barHeight, barW / 2);
+      ctx.roundRect(x, y, actualBarW, barHeight, actualBarW / 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-  }, [waveform, progress, isPlaying, liveData, totalBars]);
+  }, [waveform, progress, isPlaying, liveData]);
 
   return (
-    <div ref={containerRef} className="cursor-pointer group relative select-none" onClick={handleClick} style={{ height, width: '100%' }}>
-      <canvas ref={canvasRef} width="100%" height={height} className="block" />
+    <div ref={containerRef} className="cursor-pointer group relative select-none w-full overflow-hidden" onClick={handleClick} style={{ height, maxWidth: '100%' }}>
+      <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   );
 };

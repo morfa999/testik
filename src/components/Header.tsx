@@ -43,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth, user, onOpenProfile, onOpen
       {/* Desktop */}
       <div className="hidden md:flex max-w-7xl mx-auto px-6 h-[56px] items-center justify-between">
         <button onClick={onGoHome} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-          <img src="/images/logov.png" alt="KITSTUDIO" className="h-7 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+          <img src="/images/logov.png" alt="KITSTUDIO" className="h-9 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           <span className="text-[16px] font-extrabold tracking-[-0.02em] text-[#0A0A0A]">KITSTUDIO</span>
         </button>
         
@@ -101,7 +101,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth, user, onOpenProfile, onOpen
       {/* Mobile - только верхняя панель, без нижней */}
       <div className="md:hidden flex items-center justify-between h-[56px] px-3 gap-1">
         <button onClick={onGoHome} className="flex items-center gap-2 shrink-0">
-          <img src="/images/logov.png" alt="KITSTUDIO" className="h-6 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+          <img src="/images/logov.png" alt="KITSTUDIO" className="h-8 w-auto object-contain" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
           <span className="text-[14px] font-extrabold tracking-[-0.02em] text-[#0A0A0A]">KITSTUDIO</span>
         </button>
         <div className="flex items-center gap-0.5">

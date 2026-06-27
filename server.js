@@ -106,7 +106,7 @@ async function getUser(req) {
 
 function isAdmin(u) { return u && (u.email === ADMIN_EMAIL || u.is_admin); }
 const COLORS = ['#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#6366F1','#8B5CF6','#EC4899','#F43F5E'];
-function fmtUser(u) { return { id:u.id, name:u.name, email:u.email, avatarColor:u.avatar_color, subscription:u.subscription, subscriptionEnd:u.subscription_end, monthlyDownloads:u.monthly_downloads, totalDownloads:u.total_downloads||0, createdAt:u.created_at }; }
+function fmtUser(u) { return { id:u.id, name:u.name, email:u.email, avatarColor:u.avatar_color, subscription:u.subscription, subscriptionEnd:u.subscription_end, monthlyDownloads:u.monthly_downloads, totalDownloads:u.total_downloads||0, isAdmin:u.is_admin||false, createdAt:u.created_at }; }
 function fmtSound(s) { return { id:s.id, title:s.title, category:s.category, bpm:0, key:'-', tags:s.tags||[], downloads:s.downloads, plays:s.plays||0, isFree:s.is_free, isNew:true, waveform:s.waveform||[], duration:s.duration, durationSeconds:s.duration_seconds, dateAdded:s.date_added, authorId:s.author_id, authorName:s.author_name, fileData:s.file_data, fileName:s.file_name }; }
 function fmtPack(p) { return { id:p.id, title:p.title, soundCount:p.sound_count, category:p.category, isFree:p.is_free, downloads:p.downloads, authorId:p.author_id, authorName:p.author_name, dateAdded:p.date_added }; }
 function genWave(seed) { const w=[]; for(let i=0;i<60;i++){const v=Math.abs(Math.sin(i*0.3+seed)*0.4+Math.sin(i*0.7+seed*2)*0.3+Math.sin(i*1.1+seed*0.5)*0.2+Math.sin(i*0.15+seed*3)*0.1);w.push(Math.min(1,Math.max(0.06,v)));} return w; }

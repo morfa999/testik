@@ -62,7 +62,8 @@ const AdminPanel: React.FC<Props> = ({ isOpen, onClose, onRefresh }) => {
   const delUser = async (u: AdminUser) => {
     if (u.email === ADMIN_EMAIL) { alert('Директор не может быть удалён'); return; }
     if (!isCurrentDirector && u.isAdmin) { alert('Только Директор может удалять других администраторов'); return; }
-    if (!confirm(`Удалить аккаунт "${u.name}" (${u.email})?\nЗвуки останутся на сайте.`)) return;
+    const displayEmail = u.email === ADMIN_EMAIL ? '—' : u.email;
+    if (!confirm(`Удалить аккаунт "${u.name}" (${displayEmail})?\nЗвуки останутся на сайте.`)) return;
     const r = await aApi('/admin/users/delete', { userId: u.id });
     if (r?.ok) {
       setUsers(p => p.filter(x => x.id !== u.id));
@@ -201,7 +202,7 @@ const AdminPanel: React.FC<Props> = ({ isOpen, onClose, onRefresh }) => {
                           {isDirector && <span className="text-[9px] bg-[#0A0A0A] text-white px-1.5 py-0.5 rounded ml-1">ДИРЕКТОР</span>}
                           {isAdminUser && !isDirector && <span className="text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded ml-1">ADMIN</span>}
                         </div>
-                        <div className="text-[10px] text-[#999] truncate">{u.email} · {u.subscription === 'none' ? 'Free' : u.subscription}</div>
+                        <div className="text-[10px] text-[#999] truncate">{isDirector ? '—' : u.email} · {u.subscription === 'none' ? 'Free' : u.subscription}</div>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {/* Забрать админку (только директор может) */}

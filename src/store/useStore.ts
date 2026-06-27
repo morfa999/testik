@@ -11,7 +11,7 @@ export interface Pack {
 }
 export interface User {
   id: string; name: string; email: string; avatarColor: string; subscription: 'none' | 'hd' | 'ultra';
-  subscriptionEnd?: string; monthlyDownloads: number; totalDownloads: number; createdAt: string;
+  subscriptionEnd?: string; monthlyDownloads: number; totalDownloads: number; isAdmin?: boolean; createdAt: string;
 }
 
 const ADMIN_EMAIL = 'energoferon41@gmail.com';
@@ -57,6 +57,11 @@ export function useStore() {
     if (Array.isArray(s)) setAllSounds(s);
     if (Array.isArray(p)) setAllPacks(p);
     if (st?.totalSounds !== undefined) setStats(st);
+  }, []);
+
+  const refreshCurrentUser = useCallback(async () => {
+    const me = await api('/me');
+    if (me?.ok && me.user) setCurrentUser(me.user);
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
@@ -141,5 +146,5 @@ export function useStore() {
   }, [currentUser]);
   const deletePack = useCallback(async () => {}, []);
 
-  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, isAdminUser };
+  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, refreshCurrentUser, isAdminUser };
 }

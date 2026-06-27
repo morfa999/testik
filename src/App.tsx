@@ -63,7 +63,7 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const isAdmin = store.currentUser?.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = (store.currentUser as any)?.isAdmin === true || store.currentUser?.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const hasPremiumAccess = isAdmin || (store.currentUser?.subscription === 'hd') || (store.currentUser?.subscription === 'ultra');
   const allSounds = store.allSounds;
 
