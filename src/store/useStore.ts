@@ -101,21 +101,49 @@ export function useStore() {
     await api(`/sounds/${soundId}/download`, { format });
     setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, downloads: s.downloads + 1 } : s));
     if (!sound.isFree && currentUser && !isAdminUser) {
-      // Обновляем с сервера для точности monthly/total
       const me = await api('/me');
       if (me?.ok && me.user) setCurrentUser(me.user);
     }
-    if (sound.fileData && sound.fileName) { 
+    // Lazy load file_data только если его нет
+    let fileData = sound.fileData;
+    let fileName = sound.fileName;
+    if (!fileData) {
+      try {
+        const r = await api(`/sounds/${soundId}/audio`);
+        if (r?.fileData) {
+          fileData = r.fileData;
+          fileName = r.fileName;
+          // Сохраняем в state для следующего раза
+          setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, fileData, fileName } : s));
+        }
+      } catch (e) { return; }
+    }
+    if (fileData && fileName) { 
       const l = document.createElement('a'); 
-      l.href = sound.fileData; 
-      // Меняем расширение в зависимости от формата
-      const baseName = sound.fileName.replace(/\.[^/.]+$/, '');
+      l.href = fileData; 
+      const baseName = fileName.replace(/\.[^/.]+$/, '');
       l.download = `${baseName}.${format}`; 
       document.body.appendChild(l); 
       l.click(); 
       document.body.removeChild(l); 
     }
   }, [allSounds, canDownload, currentUser, isAdminUser]);
+
+  // Lazy load audio для воспроизведения
+  const getAudioData = useCallback(async (soundId: string): Promise<{ fileData: string; fileName: string } | null> => {
+    const sound = allSounds.find(s => s.id === soundId);
+    if (sound?.fileData) return { fileData: sound.fileData, fileName: sound.fileName || 'sound.wav' };
+    
+    try {
+      const r = await api(`/sounds/${soundId}/audio`);
+      if (r?.fileData) {
+        const data = { fileData: r.fileData, fileName: r.fileName || 'sound.wav' };
+        setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, ...data } : s));
+        return data;
+      }
+    } catch (e) { console.error('getAudioData:', e); }
+    return null;
+  }, [allSounds]);
 
   const addSound = useCallback(async (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string }): Promise<{ ok: boolean; pending?: boolean; error?: string }> => {
     if (!currentUser) return { ok: false, error: 'Не авторизован' };
@@ -146,5 +174,5 @@ export function useStore() {
   }, [currentUser]);
   const deletePack = useCallback(async () => {}, []);
 
-  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, refreshCurrentUser, isAdminUser };
+  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, refreshCurrentUser, getAudioData, isAdminUser };
 }

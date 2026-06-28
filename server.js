@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import zlib from 'zlib';
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -31,8 +32,34 @@ if (DATABASE_URL) {
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 
-// ===== Static files (must be before API routes) =====
-app.use(express.static(path.join(__dirname, 'dist')));
+// ===== Gzip сжатие для всех ответов =====
+app.use((req, res, next) => {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  if (!acceptEncoding.includes('gzip')) return next();
+  
+  const origJson = res.json.bind(res);
+  res.json = (data) => {
+    const json = JSON.stringify(data);
+    zlib.gzip(json, (err, compressed) => {
+      if (err || !compressed) return origJson(data);
+      res.setHeader('Content-Encoding', 'gzip');
+      res.setHeader('Content-Type', 'application/json');
+      res.send(compressed);
+    });
+    return res;
+  };
+  next();
+});
+
+// ===== Кеширование статики на 1 год =====
+app.use(express.static(path.join(__dirname, 'dist'), {
+  maxAge: '31536000',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+}));
 
 // ===== DB Init =====
 async function initDB() {
@@ -200,7 +227,11 @@ app.post('/api/user/subscribe', async (req, res) => {
 app.get('/api/sounds', async (req, res) => {
   if (!pool) return res.json([]);
   try {
-    const r = await pool.query('SELECT * FROM sounds ORDER BY date_added DESC');
+    // Без file_data/file_name - только метаданные (ускоряет загрузку в 100 раз)
+    // Лимит 500 последних звуков чтобы не перегружать сервер
+    const limit = Math.min(parseInt(req.query.limit) || 500, 500);
+    const r = await pool.query('SELECT id, title, category, tags, downloads, plays, is_free, duration, duration_seconds, waveform, date_added, author_id, author_name FROM sounds ORDER BY date_added DESC LIMIT $1', [limit]);
+    res.setHeader('Cache-Control', 'public, max-age=10');
     res.json(r.rows.map(fmtSound));
   } catch (e) { console.error(e); res.json([]); }
 });
@@ -226,6 +257,16 @@ app.post('/api/sounds', async (req, res) => {
     }
     res.json({ ok: true, pending: !isAdmin(u) });
   } catch (e) { console.error(e); res.json({ ok: false }); }
+});
+
+// Endpoint для получения только аудио файла (lazy load при клике play)
+app.get('/api/sounds/:id/audio', async (req, res) => {
+  if (!pool) return res.status(404).json({ error: 'No DB' });
+  try {
+    const r = await pool.query('SELECT file_data, file_name FROM sounds WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ fileData: r.rows[0].file_data, fileName: r.rows[0].file_name });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Server error' }); }
 });
 
 app.post('/api/sounds/:id/download', async (req, res) => {
@@ -277,7 +318,9 @@ app.post('/api/sounds/:id/play', async (req, res) => {
 app.get('/api/packs', async (req, res) => {
   if (!pool) return res.json([]);
   try {
-    const r = await pool.query('SELECT * FROM packs ORDER BY date_added DESC');
+    const limit = Math.min(parseInt(req.query.limit) || 100, 100);
+    const r = await pool.query('SELECT * FROM packs ORDER BY date_added DESC LIMIT $1', [limit]);
+    res.setHeader('Cache-Control', 'public, max-age=30');
     res.json(r.rows.map(fmtPack));
   } catch (e) { console.error(e); res.json([]); }
 });
@@ -301,6 +344,7 @@ app.get('/api/stats', async (req, res) => {
   try {
     const s = await pool.query('SELECT COUNT(*) as c, COALESCE(SUM(downloads), 0) as d FROM sounds');
     const p = await pool.query('SELECT COALESCE(SUM(downloads), 0) as d FROM packs');
+    res.setHeader('Cache-Control', 'public, max-age=15');
     res.json({ totalSounds: parseInt(s.rows[0].c), totalDownloads: parseInt(s.rows[0].d) + parseInt(p.rows[0].d) });
   } catch (e) { console.error(e); res.json({ totalSounds: 0, totalDownloads: 0 }); }
 });
@@ -349,8 +393,9 @@ app.get('/api/admin/sounds', async (req, res) => {
   try {
     const u = await getUser(req);
     if (!isAdmin(u)) return res.json([]);
-    const r = await pool.query('SELECT id, title, category, author_name, downloads, date_added, file_data FROM sounds ORDER BY date_added DESC');
-    res.json(r.rows.map(s => ({ id: s.id, title: s.title, category: s.category, authorName: s.author_name, downloads: s.downloads, dateAdded: s.date_added, fileData: s.file_data })));
+    // Без file_data для скорости, аудио загружается отдельно при клике
+    const r = await pool.query('SELECT id, title, category, author_name, downloads, date_added FROM sounds ORDER BY date_added DESC LIMIT 200');
+    res.json(r.rows.map(s => ({ id: s.id, title: s.title, category: s.category, authorName: s.author_name, downloads: s.downloads, dateAdded: s.date_added })));
   } catch { res.json([]); }
 });
 
@@ -359,8 +404,8 @@ app.get('/api/admin/pending', async (req, res) => {
   try {
     const u = await getUser(req);
     if (!isAdmin(u)) return res.json([]);
-    const r = await pool.query('SELECT * FROM pending_sounds ORDER BY date_added DESC');
-    res.json(r.rows.map(fmtSound));
+    const r = await pool.query('SELECT id, title, category, author_name, date_added FROM pending_sounds ORDER BY date_added DESC LIMIT 100');
+    res.json(r.rows.map(s => ({ id: s.id, title: s.title, category: s.category, authorName: s.author_name, dateAdded: s.date_added })));
   } catch { res.json([]); }
 });
 
@@ -369,7 +414,8 @@ app.get('/api/admin/users', async (req, res) => {
   try {
     const u = await getUser(req);
     if (!isAdmin(u)) return res.json([]);
-    const r = await pool.query('SELECT id, name, email, avatar_color, subscription, is_admin, created_at FROM users ORDER BY created_at DESC');
+    // Лимит 100 пользователей для админ-панели
+    const r = await pool.query('SELECT id, name, email, avatar_color, subscription, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 100');
     res.json(r.rows.map(u => ({ id: u.id, name: u.name, email: u.email, avatarColor: u.avatar_color, subscription: u.subscription, isAdmin: u.is_admin, createdAt: u.created_at })));
   } catch { res.json([]); }
 });
@@ -379,7 +425,7 @@ app.get('/api/admin/reports', async (req, res) => {
   try {
     const u = await getUser(req);
     if (!isAdmin(u)) return res.json([]);
-    const r = await pool.query(`SELECT * FROM reports WHERE status='new' ORDER BY created_at DESC`);
+    const r = await pool.query(`SELECT id, user_id, user_name, user_email, message, status, created_at FROM reports WHERE status='new' ORDER BY created_at DESC LIMIT 50`);
     res.json(r.rows);
   } catch { res.json([]); }
 });

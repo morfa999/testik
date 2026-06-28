@@ -87,13 +87,13 @@ export default function BotCheck({ onVerify }: Props) {
           </span>
         </div>
 
-        {/* Slider button - with 9px left margin (на 3мм меньше чем было) */}
+        {/* Slider button - with 6px left margin (на 3px меньше чем было) */}
         <div
           className={`absolute top-1 w-[44px] h-[calc(100%-8px)] rounded-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all ${
             isVerified ? 'bg-white' : 'bg-white shadow-md'
           }`}
           style={{ 
-            left: `${9 + position}px`,
+            left: `${6 + position}px`,
             transform: isDragging ? 'scale(1.05)' : 'scale(1)'
           }}
           onMouseDown={(e) => handleStart(e.clientX)}
