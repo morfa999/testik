@@ -260,12 +260,33 @@ app.post('/api/sounds', async (req, res) => {
 });
 
 // Endpoint для получения только аудио файла (lazy load при клике play)
+const audioCache = new Map();
 app.get('/api/sounds/:id/audio', async (req, res) => {
   if (!pool) return res.status(404).json({ error: 'No DB' });
   try {
+    // Проверяем кеш
+    const cached = audioCache.get(req.params.id);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('X-Cache', 'HIT');
+      return res.json(cached);
+    }
+    
     const r = await pool.query('SELECT file_data, file_name FROM sounds WHERE id=$1', [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json({ fileData: r.rows[0].file_data, fileName: r.rows[0].file_name });
+    
+    const result = { fileData: r.rows[0].file_data, fileName: r.rows[0].file_name };
+    audioCache.set(req.params.id, result);
+    
+    // Лимит кеша - 50 последних аудио
+    if (audioCache.size > 50) {
+      const firstKey = audioCache.keys().next().value;
+      audioCache.delete(firstKey);
+    }
+    
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('X-Cache', 'MISS');
+    res.json(result);
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error' }); }
 });
 

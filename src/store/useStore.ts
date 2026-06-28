@@ -129,21 +129,47 @@ export function useStore() {
     }
   }, [allSounds, canDownload, currentUser, isAdminUser]);
 
-  // Lazy load audio для воспроизведения
+  // Lazy load audio для воспроизведения с кешированием
+  const audioCacheRef = useRef<Map<string, { fileData: string; fileName: string }>>(new Map());
+  
   const getAudioData = useCallback(async (soundId: string): Promise<{ fileData: string; fileName: string } | null> => {
     const sound = allSounds.find(s => s.id === soundId);
     if (sound?.fileData) return { fileData: sound.fileData, fileName: sound.fileName || 'sound.wav' };
+    
+    // Проверяем кеш в памяти
+    const cached = audioCacheRef.current.get(soundId);
+    if (cached) return cached;
+    
+    // Проверяем sessionStorage (для текущей сессии)
+    try {
+      const fromSession = sessionStorage.getItem(`audio_${soundId}`);
+      if (fromSession) {
+        const parsed = JSON.parse(fromSession);
+        audioCacheRef.current.set(soundId, parsed);
+        return parsed;
+      }
+    } catch {}
     
     try {
       const r = await api(`/sounds/${soundId}/audio`);
       if (r?.fileData) {
         const data = { fileData: r.fileData, fileName: r.fileName || 'sound.wav' };
+        audioCacheRef.current.set(soundId, data);
+        // Сохраняем в sessionStorage
+        try { sessionStorage.setItem(`audio_${soundId}`, JSON.stringify(data)); } catch {}
         setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, ...data } : s));
         return data;
       }
     } catch (e) { console.error('getAudioData:', e); }
     return null;
   }, [allSounds]);
+
+  // Прямое обновление fileData для конкретного звука
+  const updateSoundFileData = useCallback((soundId: string, fileData: string, fileName: string) => {
+    setAllSounds(prev => prev.map(s => s.id === soundId ? { ...s, fileData, fileName } : s));
+    audioCacheRef.current.set(soundId, { fileData, fileName });
+    try { sessionStorage.setItem(`audio_${soundId}`, JSON.stringify({ fileData, fileName })); } catch {}
+  }, []);
 
   const addSound = useCallback(async (data: { title: string; category: string; tags: string[]; isFree: boolean; duration: string; durationSeconds: number; fileData?: string; fileName?: string }): Promise<{ ok: boolean; pending?: boolean; error?: string }> => {
     if (!currentUser) return { ok: false, error: 'Не авторизован' };
@@ -174,5 +200,5 @@ export function useStore() {
   }, [currentUser]);
   const deletePack = useCallback(async () => {}, []);
 
-  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, refreshCurrentUser, getAudioData, isAdminUser };
+  return { currentUser, allSounds, allPacks, totalSounds, totalDownloads, register, login, logout, updateName, setSubscription, canDownload, downloadSound, addSound, addPack, deleteSound, deletePack, refreshData, refreshCurrentUser, getAudioData, updateSoundFileData, isAdminUser };
 }

@@ -31,7 +31,7 @@ const ITEMS_PER_PAGE = 9;
 
 const App: React.FC = () => {
   const store = useStore();
-  const { success: notifySuccess, info: notifyInfo } = useNotify();
+  const { success: notifySuccess, info: notifyInfo, error: notifyError } = useNotify();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Периодически проверяем обновления currentUser (для отображения новых прав админа)
@@ -112,63 +112,77 @@ const App: React.FC = () => {
   }, [filteredSounds, currentPage]);
 
   useEffect(() => {
-    if (!playingId) { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } setPlayProgress(0); setCurrentTime(0); return; }
+    if (!playingId) { 
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } 
+      setPlayProgress(0); setCurrentTime(0); 
+      return; 
+    }
+    
     const sound = allSounds.find(s => s.id === playingId);
     if (!sound) { setPlayingId(null); return; }
     
-    let cancelled = false;
+    // Если нет fileData - загружаем с сервера ПЕРЕД созданием Audio
+    if (!sound.fileData) {
+      const currentPlayingId = playingId;
+      setPlayingId(null); // временно отключаем
+      store.getAudioData(currentPlayingId).then((data) => {
+        if (data) {
+          // Обновляем state напрямую через store
+          store.updateSoundFileData(currentPlayingId, data.fileData, data.fileName);
+          setPlayingId(currentPlayingId); // запускаем снова
+        } else {
+          console.error('Не удалось загрузить звук');
+        }
+      });
+      return;
+    }
+    
     const audio = new Audio(); 
     audioRef.current = audio;
     
     let playCountIncremented = false;
     
-    const setupAudio = async (dataUrl: string) => {
-      if (cancelled) return;
-      const onLoaded = () => {
-        audio.play().catch((e) => { console.warn('Audio play failed:', e); });
-      };
-      const up = () => { 
-        if (audio.duration && isFinite(audio.duration)) { 
-          const progress = audio.currentTime / audio.duration;
-          setPlayProgress(progress); 
-          setCurrentTime(audio.currentTime); 
-          if (progress >= 0.99 && !playCountIncremented) {
-            playCountIncremented = true;
-            fetch(`/api/sounds/${playingId}/play`, { method: 'POST' }).catch(() => {});
-          }
-        } 
-      };
-      const end = () => { setPlayingId(null); setPlayProgress(0); setCurrentTime(0); };
-      const onError = () => {
-        setTimeout(() => { if (audioRef.current === audio && playingId) { audio.load(); audio.play().catch(() => {}); } }, 100);
-      };
-      
-      audio.addEventListener('loadedmetadata', onLoaded);
-      audio.addEventListener('canplay', onLoaded);
-      audio.addEventListener('timeupdate', up);
-      audio.addEventListener('ended', end);
-      audio.addEventListener('error', onError);
-      
-      try {
-        audio.src = dataUrl;
-        audio.load();
-      } catch (e) { console.error('Audio src error:', e); }
+    const onLoaded = () => {
+      audio.play().catch((e) => { console.warn('Audio play failed:', e); });
+    };
+    const up = () => { 
+      if (audio.duration && isFinite(audio.duration)) { 
+        const progress = audio.currentTime / audio.duration;
+        setPlayProgress(progress); 
+        setCurrentTime(audio.currentTime); 
+        if (progress >= 0.99 && !playCountIncremented) {
+          playCountIncremented = true;
+          fetch(`/api/sounds/${playingId}/play`, { method: 'POST' }).catch(() => {});
+        }
+      } 
+    };
+    const end = () => { setPlayingId(null); setPlayProgress(0); setCurrentTime(0); };
+    const onError = () => {
+      setTimeout(() => { if (audioRef.current === audio && playingId) { audio.load(); audio.play().catch(() => {}); } }, 100);
     };
     
-    // Lazy load audio если fileData отсутствует
-    if (sound.fileData) {
-      setupAudio(sound.fileData);
-    } else {
-      store.getAudioData(playingId).then((data) => {
-        if (data && !cancelled) setupAudio(data.fileData);
-      });
-    }
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('canplay', onLoaded);
+    audio.addEventListener('timeupdate', up);
+    audio.addEventListener('ended', end);
+    audio.addEventListener('error', onError);
+    
+    audio.preload = 'auto';
+    
+    try {
+      audio.src = sound.fileData;
+      audio.load();
+    } catch (e) { console.error('Audio src error:', e); }
     
     return () => { 
-      cancelled = true;
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('canplay', onLoaded);
+      audio.removeEventListener('timeupdate', up);
+      audio.removeEventListener('ended', end);
+      audio.removeEventListener('error', onError);
       audio.pause();
     };
-  }, [playingId, allSounds, store]);
+  }, [playingId, allSounds, store, notifyError]);
 
   const togglePlay = useCallback((id: string) => { setPlayingId(p => p === id ? null : id); if (playingId !== id) { setPlayProgress(0); setCurrentTime(0); } }, [playingId]);
   const handleSeek = useCallback((p: number) => { if (audioRef.current?.duration) { audioRef.current.currentTime = p * audioRef.current.duration; setPlayProgress(p); setCurrentTime(audioRef.current.currentTime); } }, []);
