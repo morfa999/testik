@@ -25,8 +25,8 @@ const ListSoundCard: React.FC<ListSoundCardProps> = ({ sound, isPlaying, playPro
   return (
     <div className={`group flex items-center gap-4 bg-white border rounded-xl px-4 py-3 transition-all opacity-0 animate-fade-in-up ${isPlaying ? 'border-[#0A0A0A]/15 shadow-[0_2px_12px_rgba(0,0,0,0.05)]' : 'border-[#EBEBEB] hover:border-[#D4D4D4] hover:shadow-[0_1px_8px_rgba(0,0,0,0.03)]'}`}
       style={{ animationDelay: `${animationDelay}ms`, animationFillMode: 'forwards' }}>
-      <button onClick={onTogglePlay} disabled={!sound.fileData}
-        className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${!sound.fileData ? 'bg-[#F3F3F3] text-[#C0C0C0] cursor-not-allowed' : isPlaying ? 'bg-[#0A0A0A] text-white shadow-md shadow-black/10' : 'bg-[#F3F3F3] text-[#0A0A0A] hover:bg-[#E8E8E8]'}`}>
+      <button onClick={onTogglePlay}
+        className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${isPlaying ? 'bg-[#0A0A0A] text-white shadow-md shadow-black/10' : 'bg-[#F3F3F3] text-[#0A0A0A] hover:bg-[#E8E8E8]'}`}>
         {isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
       </button>
       <div className="w-40 shrink-0 min-w-0">

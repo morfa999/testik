@@ -30,8 +30,7 @@ const SoundCard: React.FC<SoundCardProps> = ({ sound, isPlaying, playProgress, c
       <div className="flex items-start gap-3 mb-3">
         <button
           onClick={onTogglePlay}
-          disabled={!sound.fileData}
-          className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${!sound.fileData ? 'bg-[#F3F3F3] text-[#C0C0C0] cursor-not-allowed' : isPlaying ? 'bg-[#0A0A0A] text-white shadow-lg shadow-black/15' : 'bg-[#F3F3F3] text-[#0A0A0A] hover:bg-[#E8E8E8] group-hover:bg-[#E5E5E5]'}`}
+          className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${isPlaying ? 'bg-[#0A0A0A] text-white shadow-lg shadow-black/15' : 'bg-[#F3F3F3] text-[#0A0A0A] hover:bg-[#E8E8E8] group-hover:bg-[#E5E5E5]'}`}
         >
           {isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={13} />}
         </button>
